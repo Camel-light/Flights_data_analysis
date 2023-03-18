@@ -1,0 +1,141 @@
+complete_dataset <- read.csv("StudentData_FlyUIBK_22_23.csv", sep = ";", header=TRUE, stringsAsFactors=T, na.strings= "N\\A")
+
+str(complete_dataset)
+
+complete_dataset <- complete_dataset[, -13]
+
+complete_dataset <- complete_dataset[, -13]
+
+complete_dataset <- subset(complete_dataset, !(row.names(complete_dataset) %in% c(361:370)))
+
+complete_dataset$Departure.date <- as.Date(complete_dataset$Departure.date, format = "%d.%m.%y")
+
+install.packages("dplyr")
+
+library(dplyr)
+
+complete_dataset$Day.of.Week <- recode(complete_dataset$Day.of.Week, "1"="Sunday", "2"="Monday", "3"="Tuesday", "4"="Wednesday", "5"="Thursday", "6"="Friday", "7"="Saturday")
+
+complete_dataset$Day.of.Week <- factor(complete_dataset$Day.of.Week)
+
+complete_dataset$Route.Code <- factor(complete_dataset$Route.Code, levels = c(1, 2, 3, 4), labels = c("BER/VIE", "VIE/BER", "VIE/OSL", "OSL/VIE"))
+
+complete_dataset_Delay.indicator_as_int <- complete_dataset
+
+complete_dataset$Delay.indicator <- factor(complete_dataset$Delay.indicator, levels = c(0, 1), labels = c("On Time", "Delayed"))
+
+new_column <- read.csv("Adjusted_delays.dat", header = FALSE, stringsAsFactors=F, na.strings= "N\\A", col.names = "Adjusted.delay")
+
+new_column_2 <- read.csv("Adjusted_delay_indicator.txt", stringsAsFactors=F, na.strings= "N\\A", header = FALSE, col.names = "Adjusted.indicator")
+
+complete_dataset$Adjusted.delay <- new_column$Adjusted.delay
+
+complete_dataset_Delay.indicator_as_int$Adjusted.delay <- new_column$Adjusted.delay
+
+complete_dataset$Adjusted.indicator <- new_column_2$Adjusted.indicator
+
+complete_dataset_Delay.indicator_as_int$Adjusted.indicator <- new_column_2$Adjusted.indicator
+
+complete_dataset$Adjusted.delay <- as.integer(complete_dataset$Adjusted.delay)
+
+complete_dataset_Delay.indicator_as_int$Adjusted.delay <- as.integer(complete_dataset$Adjusted.delay)
+
+complete_dataset$Adjusted.indicator <- factor(complete_dataset$Adjusted.indicator, levels = c(0, 1), labels = c("On Time", "Delayed"))
+
+summary(complete_dataset[, c("Airline", "Origin.airport", "Destination.airport", "Arrival.delay.in.minutes", "Delay.indicator", "Day.of.Week", "Route.Code", "Number.of.passengers", "Adjusted.delay", "Adjusted.indicator")])
+
+mean(subset(complete_dataset, Arrival.delay.in.minutes >= 0)$Arrival.delay.in.minutes)
+
+mean(subset(complete_dataset, Arrival.delay.in.minutes >= 0)$Adjusted.delay)
+
+filter(complete_dataset, Actual.arrival.time == "Cancelled")
+
+overall_performance <- summarize(complete_dataset_Delay.indicator_as_int, avg_delay = mean(Arrival.delay.in.minutes, na.rm = TRUE), StDev = sd(Arrival.delay.in.minutes, na.rm = TRUE), avg_adj_delay=mean(Adjusted.delay, na.rm= TRUE), StDev_adj = sd(Adjusted.delay, na.rm = TRUE), pct_delayed = mean(Delay.indicator, na.rm = TRUE), pct_delayed_adjusted= mean(Adjusted.indicator, na.rm = TRUE))
+
+overall_performance_early <- summarize(complete_dataset_Delay.indicator_as_int, avg_delay = mean(subset(complete_dataset, Arrival.delay.in.minutes >= 0)$Arrival.delay.in.minutes), StDev = sd(subset(complete_dataset, Arrival.delay.in.minutes >= 0)$Arrival.delay.in.minutes, na.rm = TRUE), avg_adj_delay=mean(subset(complete_dataset_Delay.indicator_as_int, Arrival.delay.in.minutes >= 0)$Adjusted.delay), StDev_adj = sd(subset(complete_dataset, Adjusted.delay >= 0)$Adjusted.delay, na.rm = TRUE), pct_delayed = mean(Delay.indicator, na.rm = TRUE), pct_delayed_adjusted= mean(Adjusted.indicator, na.rm = TRUE))
+
+overall_performance
+
+overall_performance_early
+
+Only_FlyUIBK_Airline_flights <- filter(complete_dataset_Delay.indicator_as_int, Airline == "FlyUIBK")
+
+Only_LDA_Airline_flights <- filter(complete_dataset_Delay.indicator_as_int, Airline == "LDA")
+
+Fly_UIBK_performance <- summarize(Only_FlyUIBK_Airline_flights, avg_delay = mean(Arrival.delay.in.minutes, na.rm = TRUE), avg_adj_delay=mean(Adjusted.delay, na.rm= TRUE), pct_delayed = mean(Delay.indicator, na.rm = TRUE), pct_delayed_adjusted= mean(Adjusted.indicator, na.rm = TRUE))
+
+Fly_UIBK_performance_early <- summarize(Only_FlyUIBK_Airline_flights, avg_delay = mean(subset(Only_FlyUIBK_Airline_flights, Arrival.delay.in.minutes >= 0)$Arrival.delay.in.minutes), avg_adj_delay=mean(subset(Only_FlyUIBK_Airline_flights, Arrival.delay.in.minutes >= 0)$Adjusted.delay), pct_delayed = mean(Delay.indicator, na.rm = TRUE), pct_delayed_adjusted= mean(Adjusted.indicator, na.rm = TRUE))
+
+LDA_performance <- summarize(Only_LDA_Airline_flights, avg_delay = mean(Arrival.delay.in.minutes, na.rm = TRUE), avg_adj_delay=mean(Adjusted.delay, na.rm= TRUE), pct_delayed = mean(Delay.indicator, na.rm = TRUE), pct_delayed_adjusted= mean(Adjusted.indicator, na.rm = TRUE))
+
+LDA_performance_early <- summarize(Only_LDA_Airline_flights, avg_delay = mean(subset(Only_LDA_Airline_flights, Arrival.delay.in.minutes >= 0)$Arrival.delay.in.minutes), avg_adj_delay=mean(subset(Only_LDA_Airline_flights, Arrival.delay.in.minutes >= 0)$Adjusted.delay), pct_delayed = mean(Delay.indicator, na.rm = TRUE), pct_delayed_adjusted= mean(Adjusted.indicator, na.rm = TRUE))
+
+Fly_UIBK_performance
+
+Fly_UIBK_performance_early
+
+LDA_performance
+
+LDA_performance_early
+
+avg_delays_by_day_overall <- complete_dataset_Delay.indicator_as_int %>%
+filter(Arrival.delay.in.minutes >= 0) %>%
+group_by(Day.of.Week) %>%
+summarize(avg_delay = mean(Arrival.delay.in.minutes, na.rm = TRUE),
+avg_adj_delay=mean(Adjusted.delay, na.rm= TRUE))
+
+avg_delays_by_day_FlyUIBK <- Only_FlyUIBK_Airline_flights %>%
+filter(Arrival.delay.in.minutes >= 0) %>%
+group_by(Day.of.Week) %>%
+summarize(avg_delay_FlyUIBK = mean(Arrival.delay.in.minutes, na.rm = TRUE),
+avg_adj_delay=mean(Adjusted.delay, na.rm= TRUE))
+
+avg_delays_by_day_LDA <- Only_LDA_Airline_flights %>%
+filter(Arrival.delay.in.minutes >= 0) %>%
+group_by(Day.of.Week) %>%
+summarize(avg_delay_LDA = mean(Arrival.delay.in.minutes, na.rm = TRUE))
+
+pct_delays_by_day_overall <- summarize(group_by(complete_dataset_Delay.indicator_as_int, Day.of.Week), pct_delayed = mean(Delay.indicator, na.rm = TRUE), pct_delayed_adjusted= mean(Adjusted.indicator, na.rm = TRUE))
+
+pct_delays_by_day_LDA <- summarize(group_by(Only_LDA_Airline_flights, Day.of.Week), pct_delayed_LDA = mean(Delay.indicator, na.rm = TRUE))
+
+pct_delays_by_day_FlyUIBK <- summarize(group_by(Only_FlyUIBK_Airline_flights, Day.of.Week), pct_delayed = mean(Delay.indicator, na.rm = TRUE), pct_delayed_adjusted= mean(Adjusted.indicator, na.rm = TRUE))
+
+avg_delays_by_day_overall
+
+avg_delays_by_day_FlyUIBK
+
+avg_delays_by_day_LDA
+
+pct_delays_by_day_overall
+
+pct_delays_by_day_LDA
+
+pct_delays_by_day_FlyUIBK
+
+library(ggplot2)
+
+complete_dataset_subset <- complete_dataset[complete_dataset$Day.of.Week %in% c("Friday", "Monday"),]
+
+ggplot(data = complete_dataset_subset, aes(x = Day.of.Week, y = Adjusted.delay, color = Airline, shape = Route.Code)) + geom_point() +
+geom_hline(yintercept = 15, color = "red", linewidth = 0.3) +
+scale_y_continuous(breaks = seq(0, 150, by = 10), labels = seq(0, 150, by = 10)) +
+scale_color_manual(values = c("FlyUIBK" = "blue", "LDA" = "red"))
+
+avg_delays_by_route_overall <- complete_dataset %>%
+filter(Arrival.delay.in.minutes >= 0) %>%
+group_by(Route.Code) %>%
+summarize(avg_delay = mean(Arrival.delay.in.minutes, na.rm = TRUE), avg_adj_delay=mean(Adjusted.delay, na.rm= TRUE))
+
+avg_delays_by_route_overall
+
+shapiro.test(complete_dataset$Arrival.delay.in.minutes)
+
+cor.test(complete_dataset$Adjusted.delay, complete_dataset$Number.of.passengers, method = "spearman", exact = F)
+
+library(stats)
+
+kruskal.test(Adjusted.delay ~ Day.of.Week, data = complete_dataset)
+
+kruskal.test(Adjusted.delay ~ Route.Code, data = complete_dataset)
+
